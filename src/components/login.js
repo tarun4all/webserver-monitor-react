@@ -1,5 +1,5 @@
 import React, { Component } from 'react';
-import { Input, Button, Card, Select, Alert } from 'antd';
+import { Input, Button, Card, Table, Alert } from 'antd';
 import $ from "jquery";
 import 'antd/dist/antd.css';
 
@@ -10,6 +10,8 @@ class Login extends React.Component {
         otp: '',
         otpWait: false,
         login: false,
+        user: '',
+        data: []
     };
   }
 
@@ -23,13 +25,30 @@ class Login extends React.Component {
             if(json.msg == 'OTP Sent') {
                 this.setState({
                     otpWait: true,
-                })
+			        sess: json.otp
+                });
             } else if(json.msg == 'loginDone') {
                 this.setState({
                     login: true,
+                    user: json.id
+                })
+		        this.dashboard();
+            } else if(Array.isArray(json)) {
+                this.setState({
+                    data: json,
+                })
+            } else if(json.msg == 'No data') {
+                this.setState({
+                    data: [],
                 })
             }
         }
+    });
+  }
+
+  dashboard = () => {
+    this.customAjax('http://localhost:5000/api/fetch', {
+        user: this.state.user
     });
   }
 
@@ -48,16 +67,36 @@ class Login extends React.Component {
         alert("Enter otp");
     } else {
         this.customAjax('http://localhost:5000/api/verifyOTP', {
-            contact: document.getElementById('otp').value,
+            otp: document.getElementById('otp').value, session: this.state.sess
         });
     }
   }
 
   render() {
+      var columns = [], data = [];
+      if(this.state.data.length > 0) {
+         columns = [
+            {
+              title: 'Url',
+              dataIndex: 'url',
+              key: 'url',
+            },
+            {
+              title: 'Id',
+              dataIndex: 'id',
+              key: 'id',
+            },
+          ];
+         data = [];
+        this.state.data.forEach((el, idx) => {
+            let obj = {url: el.site, id: el._id, key: idx};
+            data.push(obj);
+        })
+      }
     return (
        <div style={{"textAlign": "center", "width": '70%'}}>
             <center>
-                {this.state.login ? <p>logged in</p> :
+                {this.state.login ? <div><Table dataSource={data} columns={columns} /></div> :
                     <div>
                         <Card style={{ width: '100%', "marginTop":'10%' }}>
                             <div style={{"textAlign": "center"}}>
